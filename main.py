@@ -3,7 +3,6 @@ import argparse
 from pathlib import Path
 from src.config import load_config
 from src.cli import CLIInterface
-from src.agent import AIAgent
 from src.omniparser_launcher import OmniParserLauncher
 from rich.console import Console
 from rich.panel import Panel
@@ -116,6 +115,15 @@ def try_start_omniparser(config, cli):
         return None
 
 
+def check_display_support():
+    """检查是否有图形界面支持"""
+    import platform
+    if platform.system() == "Windows":
+        return True
+    import os
+    return "DISPLAY" in os.environ or "WAYLAND_DISPLAY" in os.environ
+
+
 def main():
     parser = argparse.ArgumentParser(description="AI Computer Controller - Let AI control your computer")
     parser.add_argument("--unsafe-fast-mode", action="store_true", 
@@ -135,7 +143,7 @@ def main():
     config = load_config()
     cli = CLIInterface()
     
-    # 如果请求安装OmniParser
+    # 如果请求安装OmniParser - 不需要GUI支持
     if args.install_omniparser:
         install_dir = args.omniparser_install_dir
         if install_dir:
@@ -143,6 +151,12 @@ def main():
             config.save_to_env()
         install_omniparser(Path(install_dir) if install_dir else None)
         return
+    
+    # 检查是否有图形界面支持（仅用于非安装命令）
+    if not check_display_support():
+        cli.print_error("No display available. pyautogui requires a graphical environment.")
+        cli.print_status("You can still install OmniParser: python main.py --install-omniparser", "info")
+        sys.exit(1)
     
     # 命令行参数覆盖配置文件
     if args.no_omniparser:
@@ -164,6 +178,9 @@ def main():
     
     # 尝试启动OmniParser
     omniparser_launcher = try_start_omniparser(config, cli)
+    
+    # 延迟导入需要GUI的模块
+    from src.agent import AIAgent
     
     safe_mode = not args.unsafe_fast_mode
     if not safe_mode:
