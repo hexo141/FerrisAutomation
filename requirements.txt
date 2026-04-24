@@ -1,0 +1,7 @@
+pyautogui
+Pillow
+requests
+python-dotenv
+rich
+pydantic
+pyreadline3; sys_platform == 'win32'
